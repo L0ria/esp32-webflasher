@@ -4,8 +4,15 @@
 # Caddy's internal CA (automatic HTTPS with a self-signed cert) — a valid
 # secure context for the Web Serial API, and it needs no domain or DNS.
 #
+# NOTE (issue #17): the site address is a *hostname* (`flash.local`), not a
+# bare `:443`. A bare port address makes Caddy's internal-CA TLS fail the
+# handshake when the client connects by IP (no SNI hostname to match), so a
+# hostname is required for the self-signed setup to actually serve. Point the
+# browser at this hostname (add it to /etc/hosts → this machine's IP) or
+# change it to your real domain below.
+#
 # To switch to a real domain + Let's Encrypt later, replace the site address
-# below with your domain and remove `tls internal`. For example:
+# with your domain and remove `tls internal`. For example:
 #
 #     flash.example.com {
 #         reverse_proxy webflasher:5060
@@ -14,7 +21,7 @@
 # Caddy will then auto-provision and renew a Let's Encrypt certificate,
 # provided DNS points at this host and ports 80/443 are reachable.
 
-:443 {
+flash.local {
     tls internal
     reverse_proxy webflasher:5060
 }
