@@ -8,7 +8,7 @@ exposes:
 * ``GET  /``                              — frontend (``static/index.html``)
 * ``GET  /static/<path>``                 — static assets
 * ``GET  /api/versions``                  — list versions + files + addresses
-* ``POST /api/upload``                    — multipart upload of 1..N ``.bin`` files
+* ``POST /api/upload``                    — multipart upload of 1..N ``.bin`` files and an optional ``meta.json``
 * ``GET  /api/versions/<v>/files/<f>``    — serve a binary (``application/octet-stream``)
 
 Spec: https://github.com/L0ria/esp32-webflasher/issues/3 (section 5)
@@ -224,7 +224,7 @@ def api_versions():
 
 @app.post("/api/upload")
 def api_upload():
-    """Save 1..N ``.bin`` files into ``BINARIES_DIR/<version>/`` (spec 5.3)."""
+    """Save 1..N ``.bin`` files (plus an optional ``meta.json``) into ``BINARIES_DIR/<version>/`` (spec 5.3)."""
     version = request.form.get("version")
     if not valid_version(version):
         return error(
@@ -235,12 +235,14 @@ def api_upload():
 
     files = request.files.getlist("files")
     if not files:
-        return error("missing required 'files' field (1..N .bin files)", 400)
+        return error("missing required 'files' field (1..N .bin files and/or meta.json)", 400)
 
     for f in files:
         if not valid_filename(f.filename):
             return error(f"invalid filename {f.filename!r}", 400)
-        if not f.filename.lower().endswith(".bin"):
+        if not (
+            f.filename.lower().endswith(".bin") or f.filename == "meta.json"
+        ):
             return error(f"file {f.filename!r} is not a .bin file", 400)
 
     version_dir = os.path.join(BINARIES_DIR, version)

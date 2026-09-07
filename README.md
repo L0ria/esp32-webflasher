@@ -59,7 +59,7 @@ curl -F version=v1.0.0 \
 - `version` — the version name (a directory under `/srv/binaries/`). Must
   start with a letter or digit, then letters/digits/`.`/`_`/`-`, 1–64 chars.
 - `files` — repeat the field for multiple files. Only `.bin` files are
-  accepted.
+  accepted, plus an optional `meta.json` (see below).
 - Uploads **overwrite** same-named files.
 - Total request size is capped at **64 MB**.
 - Response `201`:

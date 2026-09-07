@@ -67,7 +67,7 @@ dropdown.
 
 Send **one** multipart request with a `version` field and one or more
 `files=@…` fields (repeat the field for multiple files). Only `.bin` files are
-accepted. Total request size is capped at **64 MB**. Uploading a name that
+accepted, plus an optional `meta.json`. Total request size is capped at **64 MB**. Uploading a name that
 already exists **overwrites** it.
 
 ```bash
@@ -176,7 +176,7 @@ All errors are JSON: `{"error": "..."}`.
 
 | Status | Meaning | Agent action |
 |--------|---------|--------------|
-| `400`  | Missing/invalid `version`, no `files`, a filename is not a `.bin`, or an unsafe filename | Fix the `version` name and/or file list; re-send. |
+| `400`  | Missing/invalid `version`, no `files`, a filename is neither a `.bin` nor `meta.json`, or an unsafe filename | Fix the `version` name and/or file list; re-send. |
 | `413`  | Total request exceeds the 64 MB limit | Split into smaller uploads (fewer/smaller files). |
 | `500`  | Server-side failure (e.g. disk write error) | Check server logs; retry once, then report. |
 
