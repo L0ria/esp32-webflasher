@@ -1,0 +1,40 @@
+# ESP32 Web Flasher — docker-compose (issue #9, spec §7.2 of issue #3)
+#
+# Two services:
+#   webflasher  — the Flask app (port 5060), binaries bind-mounted from the host.
+#   https-proxy — Caddy 2 providing the HTTPS frontend (Web Serial requires a
+#                 secure context). Q1 was answered "self-signed is acceptable",
+#                 so Caddy's internal CA is used (see Caddyfile).
+#
+# NOTE: pre-create the host binaries directory so Docker does not create it
+# root-owned:   mkdir -p /srv/binaries
+services:
+  webflasher:
+    build: .
+    container_name: esp32-webflasher
+    ports:
+      - "5060:5060"
+    volumes:
+      - /srv/binaries:/srv/binaries
+    environment:
+      - BINARIES_DIR=/srv/binaries
+      - PORT=5060
+    restart: unless-stopped
+
+  https-proxy:
+    image: caddy:2
+    container_name: esp32-webflasher-https
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - webflasher
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
