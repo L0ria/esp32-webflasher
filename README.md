@@ -4,35 +4,28 @@ Flash ESP32 / Espressif firmware **directly from the browser** using the
 [Web Serial API](https://developer.mozilla.org/en-US/docs/Web/API/Serial) and
 [esptool-js](https://github.com/espressif/esptool-js).
 
-Upload firmware binaries to a small Python (Flask) server, pick a version in
-the web UI, and flash it to a connected ESP32 with one click — no desktop
-tools, no command line.
+Upload firmware binaries to a web server, pick a version in the web UI, and
+flash it to a connected ESP32 with one click — no desktop tools, no command
+line.
 
 ## How it works
 
-- A **Flask** backend stores binaries under `/srv/binaries/<version>/` and
-  serves a small JSON API (`GET /api/versions`, `POST /api/upload`,
-  `GET /api/versions/<v>/files/<f>`).
-- A **vanilla-JS single-page app** (no build step, no framework, no CDN) lists
-  the versions, lets you select files, and drives the flash **entirely in the
-  browser** via the vendored **esptool-js 0.6.1** bundle.
-- A **Caddy 2** sidecar provides the HTTPS frontend (Web Serial requires a
-  secure context — see [Browser requirements](#browser-requirements)).
+Upload your firmware binaries to the server, open the web app, select a
+version and the files to flash, and click **Connect & Flash** — the flashing
+runs entirely in your browser over the serial port.
+
+> The ESP32 must be connected over USB to the machine running the browser —
+> Web Serial talks to the local serial port.
 
 ## Prerequisites
 
 - **Docker** with the **docker compose** plugin.
-- A **host directory** for the binaries. Pre-create it so Docker does not
-  create it root-owned:
+- A **host directory** for the binaries:
   ```bash
-  mkdir -p /srv/binaries
+  sudo mkdir -p /srv/binaries
   ```
-  (Use `sudo` if you do not have write access to `/srv`.)
 - A **browser with Web Serial** support — **Chrome or Edge 89+** (see
   [Browser requirements](#browser-requirements)).
-
-> The ESP32 must be connected over USB to the machine running the browser —
-> Web Serial talks to the local serial port.
 
 ## Run
 
@@ -40,13 +33,13 @@ tools, no command line.
 docker compose up --build
 ```
 
-This starts the Flask app on port **5060** and the Caddy HTTPS proxy on
-**443**. Open either of the following in your browser:
+This starts the app on port **5060** and the HTTPS proxy on **443**. Open
+either of the following in your browser:
 
 - App (HTTP): <http://localhost:5060> — `localhost` is a secure context, so
   Web Serial works here.
-- App (HTTPS): <https://localhost> — served by Caddy with a **self-signed
-  internal CA** (see [HTTPS / domain setup](#https-domain-setup)).
+- App (HTTPS): <https://localhost> — served with a **self-signed certificate**
+  (see [HTTPS / domain setup](#https-domain-setup)).
 
 Then upload a version (below), select it, and click **Connect & Flash**.
 
@@ -84,13 +77,6 @@ curl http://localhost:5060/api/versions
 - Supported: **Chrome / Edge 89+** (desktop and Android; on Android via the
   Web Serial polyfill).
 - **Not supported: Firefox, Safari.**
-- If the browser lacks Web Serial, the app shows a banner
-  ("Requires Chrome/Edge 89+ (Web Serial), over HTTPS or localhost.") and
-  disables the flash button.
-
-> Plain `http://<LAN-IP>:5060` is **not** a secure context, so
-> `navigator.serial` is unavailable and flashing is impossible there — use the
-> HTTPS URL (or `localhost`).
 
 ## Flash address convention
 
@@ -103,7 +89,7 @@ the **file name** (case-insensitive prefix match, first match wins):
 | `partition`                 | `0x8000`      |
 | `ota_data`                  | `0x0`         |
 | `firmware`, `app`, `factory`| `0x10000`     |
-| *(anything else)*           | `0x10000` (default) |
+| *(anything else, e.g. `custom.bin`)* | `0x10000` (default) |
 
 ### Overriding with `meta.json`
 
@@ -118,14 +104,19 @@ To override the address (or add a display label) for a specific file, drop a
 }
 ```
 
-`meta.json` is **optional** and is merged into the `/api/versions` response. A
-missing or invalid file is ignored (it can never take the API down).
+Upload it to a version like any other file:
+
+```bash
+curl -F version=v1.0.0 \
+     -F files=@meta.json \
+     http://localhost:5060/api/upload
+```
 
 ## HTTPS / domain setup
 
-Web Serial requires a secure context, so the compose file runs a **Caddy 2**
-sidecar in front of the app. Out of the box it serves on `:443` using Caddy's
-**self-signed internal CA** (accepted per the project's Q1 answer):
+Web Serial requires a secure context, so the compose file runs an HTTPS proxy
+in front of the app. Out of the box it serves on `:443` using a
+**self-signed certificate**:
 
 ```
 :443 {
@@ -134,7 +125,7 @@ sidecar in front of the app. Out of the box it serves on `:443` using Caddy's
 }
 ```
 
-Trust the CA certificate in the browser (or just use `https://localhost`), and
+Trust the certificate in the browser (or just use `https://localhost`), and
 the page becomes a valid secure context.
 
 ### Switching to a real domain + Let's Encrypt later
@@ -148,7 +139,7 @@ the page becomes a valid secure context.
        reverse_proxy webflasher:5060
    }
    ```
-   Caddy automatically obtains and renews the certificate — no `tls internal`
+   The certificate is obtained and renewed automatically — no `tls internal`
    needed.
 4. Restart: `docker compose up -d`.
 
@@ -156,7 +147,7 @@ the page becomes a valid secure context.
 
 The **upload endpoint is intentionally unauthenticated** — this is a local
 tool for binary testing, and anyone who can reach the service can upload or
-overwrite binaries. Authentication is planned once the basics work.
+overwrite binaries.
 
 ## esptool-js license
 
