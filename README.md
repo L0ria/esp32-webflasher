@@ -86,9 +86,9 @@ the **file name** (case-insensitive prefix match, first match wins):
 
 | Filename starts with        | Flash address |
 |-----------------------------|---------------|
-| `bootloader`                | `0x0`         |
+| `bootloader`                | `0x1000`      |
 | `partition`                 | `0x8000`      |
-| `ota_data`                  | `0x0`         |
+| `ota_data`                  | `0xe000`      |
 | `firmware`, `app`, `factory`| `0x10000`     |
 | *(anything else, e.g. `custom.bin`)* | `0x10000` (default) |
 

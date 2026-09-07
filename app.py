@@ -43,9 +43,9 @@ VERSION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 #: Name-based flash address convention (spec section 5.4).  Checked in this
 #: order, case-insensitive prefix match; first match wins.
 ADDRESS_RULES = (
-    ("bootloader", "0x0"),
+    ("bootloader", "0x1000"),
     ("partition", "0x8000"),
-    ("ota_data", "0x0"),
+    ("ota_data", "0xe000"),
     ("firmware", "0x10000"),
     ("app", "0x10000"),
     ("factory", "0x10000"),
