@@ -1,0 +1,20 @@
+# ESP32 Web Flasher — HTTPS frontend (issue #9, spec §7.3 of issue #3)
+#
+# Q1 was answered: a self-signed certificate is acceptable. We therefore use
+# Caddy's internal CA (automatic HTTPS with a self-signed cert) — a valid
+# secure context for the Web Serial API, and it needs no domain or DNS.
+#
+# To switch to a real domain + Let's Encrypt later, replace the site address
+# below with your domain and remove `tls internal`. For example:
+#
+#     flash.example.com {
+#         reverse_proxy webflasher:5060
+#     }
+#
+# Caddy will then auto-provision and renew a Let's Encrypt certificate,
+# provided DNS points at this host and ports 80/443 are reachable.
+
+:443 {
+    tls internal
+    reverse_proxy webflasher:5060
+}
