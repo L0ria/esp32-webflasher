@@ -20,10 +20,6 @@ runs entirely in your browser over the serial port.
 ## Prerequisites
 
 - **Docker** with the **docker compose** plugin.
-- A **host directory** for the binaries:
-  ```bash
-  sudo mkdir -p /srv/binaries
-  ```
 - A **browser with Web Serial** support — **Chrome or Edge 89+** (see
   [Browser requirements](#browser-requirements)).
 
@@ -33,12 +29,17 @@ runs entirely in your browser over the serial port.
 docker compose up --build
 ```
 
+That's it. No host directory is required: firmware binaries are stored in a
+Docker **named volume** (`binaries`), and the Caddyfile is **baked into the
+Caddy image** at build time. So the stack starts cleanly in any Docker
+environment (including a Docker daemon running in a container / DinD).
+
 This starts the app on port **5060** and the HTTPS proxy on **443**. Open
 either of the following in your browser:
 
 - App (HTTP): <http://localhost:5060> — `localhost` is a secure context, so
   Web Serial works here.
-- App (HTTPS): <https://localhost> — served with a **self-signed certificate**
+- App (HTTPS): <https://flash.local> — served with a **self-signed certificate**
   (see [HTTPS / domain setup](#https-domain-setup)).
 
 Then upload a version (below), select it, and click **Connect & Flash**.
@@ -115,18 +116,31 @@ curl -F version=v1.0.0 \
 ## HTTPS / domain setup
 
 Web Serial requires a secure context, so the compose file runs an HTTPS proxy
-in front of the app. Out of the box it serves on `:443` using a
-**self-signed certificate**:
+in front of the app. Out of the box, Caddy serves the site under the hostname
+**`flash.local`** using a **self-signed certificate** (Caddy's internal CA):
 
 ```
-:443 {
+flash.local {
     tls internal
     reverse_proxy webflasher:5060
 }
 ```
 
-Trust the certificate in the browser (or just use `https://localhost`), and
-the page becomes a valid secure context.
+Point the browser at `https://flash.local/` after adding an `/etc/hosts` entry
+mapping `flash.local` to this machine's IP. The certificate is self-signed, so
+the browser will show a warning until the Caddy internal CA is trusted.
+
+> Why a hostname and not a bare `:443`? With Caddy's internal (self-signed)
+> CA, a bare port address fails the TLS handshake when the client connects by
+> IP (there is no SNI hostname for the certificate to match). A hostname makes
+> the self-signed setup actually serve. See issue #17.
+
+The Caddyfile is **baked into the Caddy image** at build time (not bind-mounted
+from the host), so after editing `Caddyfile`, rebuild to pick up the change:
+
+```bash
+docker compose up --build
+```
 
 ### Switching to a real domain + Let's Encrypt later
 
@@ -141,7 +155,17 @@ the page becomes a valid secure context.
    ```
    The certificate is obtained and renewed automatically — no `tls internal`
    needed.
-4. Restart: `docker compose up -d`.
+4. Rebuild: `docker compose up --build` (the Caddyfile is baked into the
+   image).
+
+## Storage
+
+Uploaded firmware binaries are written to the `binaries` named volume
+(container path `/srv/binaries`). To inspect them on the host:
+
+```bash
+docker volume inspect esp32-webflasher_binaries
+```
 
 ## Security note
 

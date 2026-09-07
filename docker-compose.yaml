@@ -1,34 +1,55 @@
 # ESP32 Web Flasher — docker-compose (issue #9, spec §7.2 of issue #3)
 #
 # Two services:
-#   webflasher  — the Flask app (port 5060), binaries bind-mounted from the host.
+#   webflasher  — the Flask app (port 5060), binaries stored in a named volume.
 #   https-proxy — Caddy 2 providing the HTTPS frontend (Web Serial requires a
 #                 secure context). Q1 was answered "self-signed is acceptable",
 #                 so Caddy's internal CA is used (see Caddyfile).
 #
-# NOTE: pre-create the host binaries directory so Docker does not create it
-# root-owned:   mkdir -p /srv/binaries
+# Both services are built from the single `Dockerfile` (multi-stage):
+#   * webflasher  -> `target: runtime` (python:3.12-slim + Flask)
+#   * https-proxy -> `target: caddy`   (caddy:2 with the Caddyfile baked in)
+#
+# --- Fixes for issue #17 ("docker compose fails to start") -------------------
+# 1. The Caddyfile is now *baked into the Caddy image* at build time instead of
+#    bind-mounted from the host (`./Caddyfile:/etc/caddy/Caddyfile`). Bind-
+#    mounting a *file* fails in some Docker setups (e.g. a Docker daemon running
+#    in a container / DinD, or a host path that resolves to a directory) with:
+#      "error mounting ... Caddyfile ... not a directory: Are you trying to
+#       mount a directory onto a file (or vice-versa)?"
+#    Copying the file into the image avoids the host bind mount entirely and
+#    works everywhere. Rebuild (`docker compose up --build`) to pick up changes.
+# 2. Binaries are stored in a *named volume* (`binaries`) instead of a host
+#    bind mount (`/srv/binaries`). A bind mount to a path the daemon auto-
+#    creates is root-owned, so the unprivileged `appuser` (uid 1000) cannot
+#    write uploads into it ("[Errno 13] Permission denied"). A named volume is
+#    owned by the app user and works in every environment.
 services:
   webflasher:
-    build: .
+    build:
+      context: .
+      target: runtime
+    image: esp32-webflasher-webflasher
     container_name: esp32-webflasher
     ports:
       - "5060:5060"
     volumes:
-      - /srv/binaries:/srv/binaries
+      - binaries:/srv/binaries
     environment:
       - BINARIES_DIR=/srv/binaries
       - PORT=5060
     restart: unless-stopped
 
   https-proxy:
-    image: caddy:2
+    build:
+      context: .
+      target: caddy
+    image: esp32-webflasher-caddy
     container_name: esp32-webflasher-https
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -36,5 +57,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  binaries:
   caddy_data:
   caddy_config:

@@ -25,7 +25,7 @@ RUN npm pack esptool-js@0.6.1 \
  && rm -rf package esptool-js-0.6.1.tgz
 
 # --- runtime stage ----------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.12-slim AS runtime
 ENV BINARIES_DIR=/srv/binaries \
     PORT=5060 \
     PYTHONUNBUFFERED=1 \
@@ -50,3 +50,16 @@ EXPOSE 5060
 HEALTHCHECK --interval=30s --timeout=5s \
   CMD python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:5060/api/versions')" || exit 1
 CMD ["python", "app.py"]
+
+# --- caddy stage: HTTPS frontend (issue #17) --------------------------------
+# The Caddyfile is baked into the image instead of bind-mounted from the host.
+# Bind-mounting a *file* (`./Caddyfile:/etc/caddy/Caddyfile`) fails in some
+# Docker setups (e.g. a Docker daemon in a container / DinD, or a host path
+# that resolves to a directory) with:
+#   "error mounting ... Caddyfile ... not a directory: Are you trying to mount
+#    a directory onto a file (or vice-versa)?"
+# Copying the file into the image at build time avoids the host bind mount
+# entirely and works in every environment. Rebuild (`docker compose up --build`)
+# picks up Caddyfile changes.
+FROM caddy:2 AS caddy
+COPY Caddyfile /etc/caddy/Caddyfile
