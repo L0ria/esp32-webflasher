@@ -197,6 +197,20 @@ The flashing engine is [esptool-js](https://github.com/espressif/esptool-js)
 └── Caddyfile
 ```
 
+## Testing
+
+This repository has a four-layer test suite (backend unit, frontend unit,
+API integration, browser integration) plus a Docker acceptance tier. Run
+everything, add a test to any layer, and debug a single test from
+**[`docs/TESTING.md`](docs/TESTING.md)** — the single source of truth for
+the test setup, the fixtures, the stubs, and the CI wiring (issue #26).
+
+```bash
+pytest tests/unit && npx vitest run && pytest tests/integration \
+  && npx playwright test          # the four automated layers
+scripts/docker-acceptance.sh      # the Docker acceptance tier (needs docker)
+```
+
 ## References
 
 - Planning issue / full spec: https://github.com/L0ria/esp32-webflasher/issues/3

@@ -140,3 +140,15 @@ jobs:
 
       - name: Run browser integration tests
         run: npx playwright test
+
+  docker-acceptance:
+    name: Docker acceptance (compose + scripted spec §10 checks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # ubuntu-latest ships a native Docker daemon (no dind service needed).
+      # The script owns the compose lifecycle: up --build -> checks -> down -v.
+      - name: Run docker acceptance (spec §10)
+        run: bash scripts/docker-acceptance.sh
