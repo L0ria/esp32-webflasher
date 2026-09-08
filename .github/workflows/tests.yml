@@ -7,7 +7,7 @@ name: Tests
 #   * PR 1 (this)  -> `backend-unit`   (pytest, Flask test client)
 #   * PR 2         -> `frontend-unit`  (vitest + jsdom)
 #   * PR 3         -> `api-integration` (pytest + requests, real server)
-#   * PR 4         -> `browser-integration` (Playwright + stub serial)
+#   * PR 4 (this)  -> `browser-integration` (Playwright + stub serial)
 #   * PR 5         -> `docker-acceptance` (manual / dind tier)
 #
 # Triggers:
@@ -102,3 +102,41 @@ jobs:
 
       - name: Run API integration tests
         run: pytest tests/integration
+
+  browser-integration:
+    name: Browser integration (Playwright + stub serial)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          # package-lock.json is committed, so npm's cache key can hash it.
+          cache: npm
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      # The browser suite drives the REAL app.py server (tests/e2e/fixtures.js
+      # spawns it), so the runtime deps must be importable — install them for
+      # the default python3 (the fixture's fallback interpreter).
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+          npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser integration tests
+        run: npx playwright test
