@@ -8,5 +8,10 @@ venv/
 # test scratch
 tests/**/_empty_static/
 
-# Node (frontend unit suite dev deps — issue #26, PR 2)
+# Node (dev deps — issue #26, PR 2 + PR 4)
 node_modules/
+
+# Playwright scratch (issue #26, PR 4 — browser integration suite)
+test-results/
+playwright-report/
+

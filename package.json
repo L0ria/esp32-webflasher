@@ -2,11 +2,15 @@
   "name": "esp32-webflasher",
   "private": true,
   "version": "0.0.0",
-  "description": "ESP32 Web Flasher — dev-only tooling (frontend unit suite, issue #26 PR 2). No runtime dependencies: the app itself is vanilla JS + Flask.",
+  "description": "ESP32 Web Flasher — dev-only tooling (unit + integration suites, issue #26). No runtime dependencies: the app itself is vanilla JS + Flask.",
+  "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "jsdom": "26.1.0",
     "vitest": "3.2.7"
   }
