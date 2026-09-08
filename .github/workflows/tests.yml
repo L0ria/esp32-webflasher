@@ -1,0 +1,60 @@
+name: Tests
+
+# Test pipeline for esp32-webflasher (issue #26 §6/§8).
+#
+# This file is the single home for the whole suite and grows as the phased PRs
+# land:
+#   * PR 1 (this)  -> `backend-unit`   (pytest, Flask test client)
+#   * PR 2         -> `frontend-unit`  (vitest + jsdom)
+#   * PR 3         -> `api-integration` (pytest + requests, real server)
+#   * PR 4         -> `browser-integration` (Playwright + stub serial)
+#   * PR 5         -> `docker-acceptance` (manual / dind tier)
+#
+# Triggers:
+#   * every pull request (the primary "run tests for each PR" requirement);
+#   * pushes to main (keeps main green);
+#   * manual dispatch (ad-hoc runs).
+#
+# NOTE on the quoted "on" key: bare `on` is parsed as the boolean `true` under
+# YAML 1.1, so it must be quoted (see the earlier test/verify-actions fix).
+"on":
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: the jobs only read the repository contents.
+permissions:
+  contents: read
+
+# Don't pile up stale runs when a PR gets new commits.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-unit:
+    name: Backend unit (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          # requirements.txt (runtime) + requirements-dev.txt (pytest) are both
+          # committed, so pip's cache key can hash them.
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run backend unit tests
+        run: pytest tests/unit
