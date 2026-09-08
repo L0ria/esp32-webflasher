@@ -1,0 +1,7 @@
+# Development-only test dependencies (issue #26, PR 1 — backend unit suite).
+# These are NOT installed in the slim Docker app image; they are only needed to
+# run the test suite.  Install with:  pip install -r requirements-dev.txt
+#
+# Runtime deps live in requirements.txt (flask, pinned).  Do not add runtime
+# dependencies here.
+pytest==8.3.5
