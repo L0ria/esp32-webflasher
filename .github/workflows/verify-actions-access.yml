@@ -1,6 +1,6 @@
 name: Verify Actions Access
 
-on:
+"on":
   push:
     branches: [test/verify-actions]
   workflow_dispatch:
