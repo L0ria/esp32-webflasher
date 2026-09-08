@@ -187,6 +187,7 @@ The flashing engine is [esptool-js](https://github.com/espressif/esptool-js)
 ├── requirements.txt                # flask (pinned)
 ├── static/
 │   ├── index.html                  # single-page app
+│   ├── lib.js                      # pure helpers (formatBytes, parseAddress)
 │   ├── app.js                      # UI logic + esptool-js integration
 │   ├── style.css
 │   └── vendor/

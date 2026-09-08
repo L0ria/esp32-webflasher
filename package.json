@@ -1,0 +1,13 @@
+{
+  "name": "esp32-webflasher",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ESP32 Web Flasher — dev-only tooling (frontend unit suite, issue #26 PR 2). No runtime dependencies: the app itself is vanilla JS + Flask.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "vitest": "3.2.7"
+  }
+}
