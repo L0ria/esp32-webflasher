@@ -5,3 +5,6 @@
 # Runtime deps live in requirements.txt (flask, pinned).  Do not add runtime
 # dependencies here.
 pytest==8.3.5
+# PR 3 (API integration suite): HTTP client used by tests/integration to talk
+# to the real app.py server over loopback.  Dev-only.
+requests==2.34.2
