@@ -20,4 +20,4 @@ jobs:
           echo "ref=$GITHUB_REF"
           echo "runner.os=$RUNNER_OS runner.arch=$RUNNER_ARCH"
       - name: Success marker
-        run: echo "✅ Actions verification PASSED on runner: $RUNNER_NAME"
+        run: 'echo "✅ Actions verification PASSED on runner: $RUNNER_NAME"'
