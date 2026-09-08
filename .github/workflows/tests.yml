@@ -58,3 +58,23 @@ jobs:
 
       - name: Run backend unit tests
         run: pytest tests/unit
+
+  frontend-unit:
+    name: Frontend unit (vitest + jsdom)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          # package-lock.json is committed, so npm's cache key can hash it.
+          cache: npm
+
+      - name: Install dev dependencies
+        run: npm ci
+
+      - name: Run frontend unit tests
+        run: npx vitest run

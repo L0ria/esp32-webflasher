@@ -89,6 +89,10 @@
     </p>
   </footer>
 
-  <script src="static/app.js"></script>
+  <!-- Frontend modules (issue #26, PR 2): lib.js holds the pure helpers
+       (formatBytes/parseAddress) that app.js imports; both load as ES
+       modules (deferred, executed in order) — no build step, no globals. -->
+  <script type="module" src="static/lib.js"></script>
+  <script type="module" src="static/app.js"></script>
 </body>
 </html>

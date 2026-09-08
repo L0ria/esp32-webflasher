@@ -7,3 +7,6 @@ venv/
 
 # test scratch
 tests/**/_empty_static/
+
+# Node (frontend unit suite dev deps — issue #26, PR 2)
+node_modules/
