@@ -44,6 +44,7 @@ const els = {
   banner: $("browser-support"),
   versionSelect: $("version-select"),
   refreshVersions: $("refresh-versions"),
+  deleteVersion: $("delete-version"),
   fileTable: $("file-table"),
   fileTbody: $("file-tbody"),
   noFiles: $("no-files"),
@@ -283,6 +284,52 @@ async function loadBundle() {
 }
 
 // ------------------------------------------------------------------
+// Delete a version (issue #36)
+// ------------------------------------------------------------------
+async function deleteSelectedVersion() {
+  const version = selectedVersion();
+  if (!version || state.flashing) return;
+  const count = version.files.length;
+  const ok = window.confirm(
+    `Delete version ${version.version} and all ${count} file(s)?\n` +
+      "This cannot be undone."
+  );
+  if (!ok) {
+    logInfo(`delete of ${version.version} cancelled`);
+    return;
+  }
+  logInfo(`deleting version ${version.version}…`);
+  let res;
+  try {
+    res = await fetch(`/api/versions/${encodeURIComponent(version.version)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+  } catch (err) {
+    logError(`delete failed: ${err.message}`);
+    setStatus(`Delete failed: ${err.message}`, "error");
+    return;
+  }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && body.error) detail = body.error;
+    } catch {
+      /* non-JSON error body — keep the status code detail */
+    }
+    logError(`delete of ${version.version} failed: ${detail}`);
+    setStatus(`Delete failed: ${detail}`, "error");
+    return;
+  }
+  logInfo(`version ${version.version} deleted`);
+  setStatus(`Version ${version.version} deleted.`, "ok");
+  // Re-fetch the list: the select re-populates and falls back to the
+  // "no versions" placeholder when the last version was removed.
+  await loadVersions();
+}
+
+// ------------------------------------------------------------------
 // Flash flow (spec §6.2)
 // ------------------------------------------------------------------
 async function flash() {
@@ -405,6 +452,9 @@ function syncUiState() {
     checkedFiles().length > 0;
   els.flashButton.disabled = !canFlash;
 
+  // Delete needs a selected version and a quiescent UI (issue #36).
+  els.deleteVersion.disabled = state.flashing || !selectedVersion();
+
   if (!state.serialSupported) {
     els.banner.hidden = false;
   }
@@ -424,6 +474,10 @@ function init() {
 
   els.refreshVersions.addEventListener("click", () => {
     loadVersions().then(() => logInfo("version list refreshed"));
+  });
+
+  els.deleteVersion.addEventListener("click", () => {
+    deleteSelectedVersion();
   });
 
   els.versionSelect.addEventListener("change", () => {

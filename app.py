@@ -10,6 +10,7 @@ exposes:
 * ``GET  /api/versions``                  — list versions + files + addresses
 * ``POST /api/upload``                    — multipart upload of 1..N ``.bin`` files and an optional ``meta.json``
 * ``GET  /api/versions/<v>/files/<f>``    — serve a binary (``application/octet-stream``)
+* ``DELETE /api/versions/<v>``              — remove a whole version bundle (issue #36)
 
 Spec: https://github.com/L0ria/esp32-webflasher/issues/3 (section 5)
 """
@@ -20,6 +21,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import sys
 from datetime import datetime, timezone
 
@@ -276,6 +278,41 @@ def api_serve_file(version: str, filename: str):
     return send_from_directory(
         os.path.dirname(path), filename, mimetype="application/octet-stream"
     )
+
+
+@app.delete("/api/versions/<version>")
+def api_delete_version(version: str):
+    """Delete a whole version bundle — the directory under ``BINARIES_DIR``
+    with all its files (bootloader, partition table, OTA data, firmware,
+    ``meta.json``) — in one call (issue #36).
+
+    Contract (issue #36, approved plan):
+      * unsafe version name          → ``400 {"error": ...}``
+      * version directory not found  → ``404 {"error": ...}``
+      * filesystem failure           → ``500 {"error": ...}``
+      * success                      → ``200 {"deleted": "<version>"}``
+    """
+    if not valid_version(version):
+        return error("invalid version", 400)
+    version_dir = os.path.join(BINARIES_DIR, version)
+    if not os.path.isdir(version_dir):
+        return error(f"version {version!r} not found", 404)
+    # Defense in depth: the directory must resolve back inside BINARIES_DIR
+    # (same containment pattern the upload route uses).
+    if not os.path.realpath(version_dir).startswith(
+        os.path.realpath(BINARIES_DIR) + os.sep
+    ):
+        return error(f"version {version!r} escapes the binaries directory", 400)
+    try:
+        file_count = sum(
+            1 for name in os.listdir(version_dir) if os.path.isfile(os.path.join(version_dir, name))
+        )
+        shutil.rmtree(version_dir)
+    except OSError as exc:
+        log.error("delete failed for %r: %s", version, exc)
+        return error(f"delete failed: {exc}", 500)
+    log.info("deleted version %r (%d file(s))", version, file_count)
+    return jsonify({"deleted": version}), 200
 
 
 # ---------------------------------------------------------------------------

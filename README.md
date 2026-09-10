@@ -71,6 +71,18 @@ List the uploaded versions and their computed flash addresses:
 curl http://localhost:5060/api/versions
 ```
 
+Delete a version (removes the whole bundle — all its `.bin` files and its
+`meta.json` — in one call):
+
+```bash
+curl -X DELETE http://localhost:5060/api/versions/v1.0.0
+```
+
+- Response `200`: `{"deleted": "v1.0.0"}`.
+- `404` if the version does not exist; `400` for an unsafe version name.
+- The web UI offers the same action as a **Delete** button next to the
+  version list (with a confirmation dialog).
+
 ## Browser requirements
 
 - **Web Serial** is required and is only available in a **secure context**
