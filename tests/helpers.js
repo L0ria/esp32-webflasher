@@ -68,6 +68,9 @@ export function removeSerial() {
 // ---------------------------------------------------------------------------
 export function installFetchMock(routes = {}) {
   const requested = [];
+  // `routes` is the LIVE table the handler consults on every call — tests
+  // may add, replace or remove entries after the app booted (e.g. a DELETE
+  // route for the version under test, issue #36).
   const handler = async (input, init) => {
     const url = typeof input === "string" ? input : input.url;
     const abs = new URL(url, BASE).href;
@@ -83,7 +86,7 @@ export function installFetchMock(routes = {}) {
     }
     if (route.json != null) {
       return new Response(JSON.stringify(route.json), {
-        status: 200,
+        status: route.status ?? 200,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -91,9 +94,13 @@ export function installFetchMock(routes = {}) {
   };
   // The app calls bare fetch(); in the vitest jsdom environment the global
   // fetch is Node's (absolute-URL-only) undici fetch, so override it.
-  globalThis.fetch = handler;
+  Object.defineProperty(globalThis, "fetch", {
+    value: handler,
+    configurable: true,
+    writable: true,
+  });
   window.fetch = handler;
-  return { requested };
+  return { requested, routes };
 }
 
 // ---------------------------------------------------------------------------

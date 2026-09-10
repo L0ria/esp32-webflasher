@@ -103,6 +103,25 @@ curl http://localhost:5060/api/versions
 
 You should see your `version` entry, with each file and its `address`.
 
+### 3.4 Delete a version (optional)
+
+If you uploaded the wrong files (or the wrong version name), delete the whole
+bundle — every `.bin` file plus `meta.json` — in one call:
+
+```bash
+curl -X DELETE http://localhost:5060/api/versions/v1.0.0
+```
+
+Expected success response — `200 OK`:
+
+```json
+{ "deleted": "v1.0.0" }
+```
+
+Verify with `curl http://localhost:5060/api/versions` that the version is
+gone. A missing version answers `404` with `{"error": "..."}` — re-upload if
+you need it back.
+
 ---
 
 ## 4. Naming & flash-address convention
@@ -177,6 +196,7 @@ All errors are JSON: `{"error": "..."}`.
 | Status | Meaning | Agent action |
 |--------|---------|--------------|
 | `400`  | Missing/invalid `version`, no `files`, a filename is neither a `.bin` nor `meta.json`, or an unsafe filename | Fix the `version` name and/or file list; re-send. |
+| `404`  | A `DELETE /api/versions/<v>` for a version that does not exist (or was already deleted) | Re-upload the version if it is still needed. |
 | `413`  | Total request exceeds the 64 MB limit | Split into smaller uploads (fewer/smaller files). |
 | `500`  | Server-side failure (e.g. disk write error) | Check server logs; retry once, then report. |
 
