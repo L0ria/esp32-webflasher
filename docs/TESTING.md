@@ -11,7 +11,7 @@ Guiding principles (issue #26 §2):
    serial, or the real filesystem outside a temp dir.
 2. **No new runtime deps** — test tooling is dev-only (`requirements-dev.txt`,
    `package.json`); the Docker app image stays slim and unchanged.
-3. **Fast** — the four automated layers target < 2 min on CI.
+3. **Fast** — the five automated layers target < 2 min on CI.
 4. **Spec-mapped** — each test references the spec section
    ([#3 §5/§6](https://github.com/L0ria/esp32-webflasher/issues/3)) or the
    issue it protects, so regressions (e.g. the `meta.json` upload bug fixed
@@ -23,6 +23,7 @@ Guiding principles (issue #26 §2):
 
 | # | Layer | Runner | What is **real** | What is **stubbed** | Suite |
 |---|-------|--------|------------------|---------------------|-------|
+| 0 | Static checks (no docker) | `pytest` | the checked-in files: `app.py`, `docker-compose.yaml`, `Caddyfile`, `static/*`, `Dockerfile` | nothing (no server, no network, no Docker) | `tests/static/` |
 | 1 | Backend unit | `pytest` + Flask test client | `app.py` routes & helpers, in-process | nothing (no server, no network) | `tests/unit/` |
 | 2 | Frontend unit | `vitest` + jsdom | `static/app.js`, `static/lib.js`, `static/index.html` DOM | `navigator.serial`, `fetch()`, the esptool-js bundle | `tests/*.test.js` |
 | 3 | API integration | `pytest` + `requests` | the real `python app.py` server over loopback HTTP | nothing | `tests/integration/` |
@@ -30,7 +31,7 @@ Guiding principles (issue #26 §2):
 | 5 | Docker acceptance (manual/CI tier) | `scripts/docker-acceptance.sh` | the full `docker compose` stack (webflasher + Caddy) | nothing | `scripts/` |
 
 Layering rule of thumb: **the higher the layer, the more of the real system
-runs**. A bug that survives layers 1–4 is almost certainly in the Docker
+runs**. A bug that survives layers 0–4 is almost certainly in the Docker
 packaging — layer 5 covers that.
 
 The only fake hardware anywhere is the esptool-js bundle stub and the
@@ -49,7 +50,7 @@ Install the dev-only test dependencies (runtime deps stay in
 `requirements.txt` and are *not* added to the dev file):
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt   # flask, pytest, requests
+pip install -r requirements.txt -r requirements-dev.txt   # flask, pytest, requests, PyYAML
 npm ci                                                     # vitest, jsdom, @playwright/test
 npx playwright install --with-deps chromium                # headless Chromium
 ```
@@ -64,6 +65,7 @@ npx playwright install --with-deps chromium                # headless Chromium
 From the repository root:
 
 ```bash
+pytest tests/static        # layer 0 — static checks (issue #11, spec §9.5; no docker)
 pytest tests/unit          # layer 1 — backend unit
 npx vitest run             # layer 2 — frontend unit
 pytest tests/integration   # layer 3 — API integration (real server)
@@ -73,6 +75,7 @@ npx playwright test        # layer 4 — browser integration (real page + server
 Expected green output (as of PR 5, `main` @ `96de60c`):
 
 ```
+7 passed in ~0.1s          # tests/static
 156 passed in ~0.1s        # tests/unit
 42 passed (6 files)        # vitest
 15 passed in ~0.2s         # tests/integration
@@ -388,7 +391,7 @@ issue #26).
   `test_meta_json_accepted_regression_20_25`, `"meta.json: label rendered in
   the file table (regression #20/#25)"`).
 - **One behavior per test**; describe blocks/classes group by unit.
-- **No network or hardware in unit tests** (layers 1–2); the integration
+- **No network or hardware in unit tests** (layers 0–2); the integration
   layers (3–5) are where real servers and real HTTP live.
 - **The stubs are the only fake hardware.** Anything not stubbed is real —
   that is the point of the layering.
@@ -410,9 +413,9 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 npm ci && npx playwright install --with-deps chromium
 
-# run everything (expected: 156 / 42 / 15 / 14 passed)
-pytest tests/unit && npx vitest run && pytest tests/integration \
-  && PYTHON=$PWD/.venv/bin/python npx playwright test
+# run everything (expected: 7 / 156 / 42 / 15 / 14 passed)
+pytest tests/static && pytest tests/unit && npx vitest run \
+  && pytest tests/integration && PYTHON=$PWD/.venv/bin/python npx playwright test
 
 # run one test
 pytest "tests/unit/test_meta.py::TestLoadMeta::test_broken_json_returns_empty_dict"
@@ -427,6 +430,7 @@ scripts/docker-acceptance.sh
 
 | Symptom | First look |
 |---------|-----------|
+| `pytest tests/static` failure | each test maps 1:1 to an issue #11 item (see `tests/static/test_static_checks.py`) — the failure message names the offending file/line |
 | `pytest tests/unit` collection error | `tests/unit/conftest.py` import-time `BINARIES_DIR` contract — the env var must be set before `import app` |
 | Integration: `server did not become ready` | the fixture already prints the server log — or read `server.log_path` (`/tmp/wf-integration-*/server.log`); usually a missing `flask` in the interpreter |
 | Playwright: `ModuleNotFoundError: No module named 'flask'` | the e2e fixture spawns `python3` — point it at your venv: `PYTHON=/path/to/venv/bin/python npx playwright test` |
@@ -435,7 +439,7 @@ scripts/docker-acceptance.sh
 | Acceptance: `server not ready within 60s` | `docker compose ps` + `docker compose logs webflasher`; check `BASE_URL` / port mapping |
 | Acceptance: on-disk check fails | `docker compose exec webflasher ls -la /srv/binaries/<version>` |
 
-**Useful files:** `app.py` (API contract) · `tests/unit/conftest.py` ·
-`tests/integration/conftest.py` · `tests/helpers.js` ·
+**Useful files:** `app.py` (API contract) · `tests/static/test_static_checks.py` ·
+`tests/unit/conftest.py` · `tests/integration/conftest.py` · `tests/helpers.js` ·
 `tests/e2e/fixtures.js` · `vitest.config.js` · `playwright.config.js` ·
 `pytest.ini` · `scripts/docker-acceptance.sh` · `.github/workflows/tests.yml`

@@ -8,3 +8,6 @@ pytest==8.3.5
 # PR 3 (API integration suite): HTTP client used by tests/integration to talk
 # to the real app.py server over loopback.  Dev-only.
 requests==2.34.2
+# Static-checks suite (issue #11, spec §9.5): parses docker-compose.yaml to
+# validate its syntax/structure without Docker.  Dev-only.
+PyYAML==6.0.3
