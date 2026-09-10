@@ -141,6 +141,38 @@ jobs:
       - name: Run browser integration tests
         run: npx playwright test
 
+  static-checks:
+    name: Static checks (pytest, no docker)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # The static-checks suite runs `node --check static/app.js` (issue #11
+      # item 4), so pin Node 20 to match the other JS jobs and keep the check
+      # deterministic (the suite skips that one test if node is absent).
+      - name: Set up Node 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run static checks (issue #11, spec §9.5)
+        run: pytest tests/static
+
   docker-acceptance:
     name: Docker acceptance (compose + scripted spec §10 checks)
     runs-on: ubuntu-latest
