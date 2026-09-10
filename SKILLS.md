@@ -139,6 +139,16 @@ the **file name** (case-insensitive prefix match, **first match wins**):
 
 ### Practical naming for built binaries
 
+- **Always build with an explicit FQBN** — `arduino-cli compile --fqbn
+  esp32:esp32:<board-id>` where `<board-id>` is the exact board identifier
+  for the target hardware (e.g. `esp32`, `esp32dev`, `esp32s3dev`,
+  `esp32c3dev`). Never rely on the default board — a binary built for a
+  different chip/variant won't run (or will misbehave) on the target.
+- **Always include the FQBN board identifier in every uploaded filename**
+  — e.g. `firmware-esp32.bin`, `bootloader-esp32dev.bin`,
+  `partition-table-esp32s3.bin` — so builds for different boards stay
+  distinguishable in the version dropdown and a binary built for the wrong
+  chip is never flashed.
 - **Name the application image** so it starts with `firmware`, `app`, or
   `factory` (→ `0x10000`). E.g. `firmware-esp32.bin`.
 - **Prefer the app image, not the merged image.** When arduino-cli builds with
